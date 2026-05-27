@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: weather-water-tracker
+    name: myweatherapp  
     runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: dist
