@@ -1,5 +1,11 @@
+/* eslint-disable no-restricted-globals */
+
+const CACHE_NAME = 'weather-app-v2';
+
+self.addEventListener('install', (event) => {
+  // ... rest of your code
 // service-worker.js
-const CACHE_NAME = 'weather-app-v1';
+
 const urlsToCache = [
   '/',
   '/index.html',
