@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: weather-water-tracker
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
