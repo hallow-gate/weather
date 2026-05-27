@@ -1,4 +1,3 @@
-// vite.config.js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -31,4 +30,12 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    port: 3000,
+    host: true
+  },
+  preview: {
+    port: 10000,
+    host: true
+  }
 })
