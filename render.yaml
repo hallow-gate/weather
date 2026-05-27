@@ -7,7 +7,7 @@ services:
     publishPath: dist
     envVars:
       - key: NODE_VERSION
-        value: 18.20.0
+        value: 20.18.0
     headers:
       - path: /*
         name: Cache-Control
