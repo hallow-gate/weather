@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, useLocation, NavLink as RouterNavLink } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CloudSun, Droplets, BarChart3, Settings, Sun, Moon } from 'lucide-react'
+import { CloudSun, Droplets, BarChart3, Settings, Sun, Moon, Download } from 'lucide-react'
 import WeatherDashboard from './components/WeatherDashboard'
 import WaterTracker from './components/WaterTracker'
 import Analytics from './components/Analytics'
@@ -12,15 +12,35 @@ import { useTheme } from './hooks/useTheme'
 function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [showInstall, setShowInstall] = useState(false)
+  const [isInstalled, setIsInstalled] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const location = useLocation()
 
   useEffect(() => {
+    // Check if app is already installed (PWA mode)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true)
+    }
+
+    // Listen for display mode changes
+    window.matchMedia('(display-mode: standalone)').addEventListener('change', (e) => {
+      setIsInstalled(e.matches)
+    })
+
     // Handle PWA install prompt
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault()
       setDeferredPrompt(e)
-      setShowInstall(true)
+      // Only show install button if not already installed
+      if (!window.matchMedia('(display-mode: standalone)').matches) {
+        setShowInstall(true)
+      }
+    })
+
+    // Also handle appinstalled event
+    window.addEventListener('appinstalled', () => {
+      setShowInstall(false)
+      setIsInstalled(true)
     })
 
     // Register service worker for offline support
@@ -39,7 +59,10 @@ function App() {
     if (!deferredPrompt) return
     deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') setShowInstall(false)
+    if (outcome === 'accepted') {
+      setShowInstall(false)
+      setIsInstalled(true)
+    }
     setDeferredPrompt(null)
   }
 
@@ -49,6 +72,9 @@ function App() {
     { path: '/analytics', icon: BarChart3, label: 'Stats', color: 'from-purple-500 to-pink-500' },
     { path: '/settings', icon: Settings, label: 'Settings', color: 'from-gray-500 to-slate-600' },
   ]
+
+  // Don't show download button if already installed
+  const shouldShowInstall = showInstall && !isInstalled
 
   return (
     <div className="min-h-screen transition-all duration-500 relative overflow-hidden">
@@ -64,17 +90,18 @@ function App() {
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-pink-400/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '0.5s' }} />
       </div>
 
-      {/* Install Button - Mobile Optimized */}
+      {/* Floating Download/Install Button - Only shows in browser mode */}
       <AnimatePresence>
-        {showInstall && (
+        {shouldShowInstall && (
           <motion.button
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
             onClick={handleInstall}
-            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full shadow-lg flex items-center gap-2 text-sm font-semibold whitespace-nowrap"
+            className="fixed bottom-24 right-4 z-50 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full shadow-lg flex items-center gap-2 text-sm font-semibold animate-pulse-glow"
           >
-            📱 Install App
+            <Download size={18} />
+            Download App
           </motion.button>
         )}
       </AnimatePresence>
@@ -133,6 +160,17 @@ function App() {
           ))}
         </div>
       </motion.div>
+
+      {/* Small indicator that app can be installed */}
+      {shouldShowInstall && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed bottom-36 right-4 bg-black/50 text-white text-xs px-2 py-1 rounded-full"
+        >
+          Tap to install 📱
+        </motion.div>
+      )}
     </div>
   )
 }
