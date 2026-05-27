@@ -1,10 +1,10 @@
 services:
   - type: web
     name: weather-water-tracker
-    env: static
+    runtime: static
     buildCommand: npm install && npm run build
-    staticPublishPath: dist  # ← CHANGE THIS from 'build' to 'dist'
-    publishPath: dist        # ← ADD THIS LINE
+    staticPublishPath: dist
+    publishPath: dist
     envVars:
       - key: NODE_VERSION
         value: 18.17.0
@@ -12,6 +12,9 @@ services:
       - path: /*
         name: Cache-Control
         value: public, max-age=31536000, immutable
+      - path: /index.html
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
     routes:
       - type: rewrite
         source: /*
