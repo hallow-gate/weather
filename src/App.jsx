@@ -1,6 +1,6 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, NavLink as RouterNavLink } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CloudSun, Droplets, BarChart3, Settings, Sun, Moon } from 'lucide-react'
 import WeatherDashboard from './components/WeatherDashboard'
@@ -107,48 +107,33 @@ function App() {
         className="fixed bottom-0 left-0 right-0 z-50 pb-safe"
       >
         <div className="glass rounded-t-2xl p-2 flex justify-around items-center shadow-2xl">
-          {tabs.map((tab) => {
-            const isActive = location.pathname === tab.path || (tab.path === '/' && location.pathname === '/')
-            return (
-              <NavLink
-                key={tab.path}
-                to={tab.path}
-                className={({ isActive }) => `
-                  relative flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-all duration-300
-                  ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400'}
-                `}
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeTab"
-                        className={`absolute inset-0 rounded-xl bg-gradient-to-r ${tab.color} shadow-lg`}
-                        transition={{ type: "spring", duration: 0.5 }}
-                      />
-                    )}
-                    <tab.icon size={22} className="relative z-10" />
-                    <span className="text-xs font-medium relative z-10">{tab.label}</span>
-                  </>
-                )}
-              </NavLink>
-            )
-          })}
+          {tabs.map((tab) => (
+            <RouterNavLink
+              key={tab.path}
+              to={tab.path}
+              className={({ isActive }) => `
+                relative flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-all duration-300
+                ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400'}
+              `}
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className={`absolute inset-0 rounded-xl bg-gradient-to-r ${tab.color} shadow-lg`}
+                      transition={{ type: "spring", duration: 0.5 }}
+                    />
+                  )}
+                  <tab.icon size={22} className="relative z-10" />
+                  <span className="text-xs font-medium relative z-10">{tab.label}</span>
+                </>
+              )}
+            </RouterNavLink>
+          ))}
         </div>
       </motion.div>
     </div>
-  )
-}
-
-// Helper component for navigation
-const NavLink = ({ to, children, className }) => {
-  const location = useLocation()
-  const isActive = location.pathname === to || (to === '/' && location.pathname === '/')
-  
-  return (
-    <a href={to} className={typeof className === 'function' ? className({ isActive }) : className}>
-      {typeof children === 'function' ? children({ isActive }) : children}
-    </a>
   )
 }
 
