@@ -1,26 +1,38 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react'
-import { Routes, Route, NavLink } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CloudSun, Droplets, BarChart3, Settings, Sun, Moon, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CloudSun, Droplets, BarChart3, Settings, Sun, Moon } from 'lucide-react'
 import WeatherDashboard from './components/WeatherDashboard'
 import WaterTracker from './components/WaterTracker'
 import Analytics from './components/Analytics'
-import SettingsPage from './components/Settings'  // Renamed import
+import SettingsPage from './components/Settings'
 import { useTheme } from './hooks/useTheme'
 
 function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [showInstall, setShowInstall] = useState(false)
   const { theme, toggleTheme } = useTheme()
-  const [currentPage, setCurrentPage] = useState(0)
+  const location = useLocation()
 
   useEffect(() => {
+    // Handle PWA install prompt
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault()
       setDeferredPrompt(e)
       setShowInstall(true)
     })
+
+    // Register service worker for offline support
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(registration => {
+          console.log('SW registered: ', registration)
+        }).catch(error => {
+          console.log('SW registration failed: ', error)
+        })
+      })
+    }
   }, [])
 
   const handleInstall = async () => {
@@ -52,52 +64,51 @@ function App() {
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-pink-400/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '0.5s' }} />
       </div>
 
-      {/* Install Button */}
+      {/* Install Button - Mobile Optimized */}
       <AnimatePresence>
         {showInstall && (
           <motion.button
-            initial={{ x: 100, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 100, opacity: 0 }}
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
             onClick={handleInstall}
-            className="fixed bottom-24 right-4 z-50 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full shadow-lg flex items-center gap-2 text-sm font-semibold"
+            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full shadow-lg flex items-center gap-2 text-sm font-semibold whitespace-nowrap"
           >
             📱 Install App
           </motion.button>
         )}
       </AnimatePresence>
 
-      {/* Theme Toggle Button */}
+      {/* Theme Toggle Button - Mobile Optimized */}
       <motion.button
         whileTap={{ scale: 0.95 }}
         onClick={toggleTheme}
-        className="fixed top-4 right-4 z-50 p-2.5 rounded-full glass text-gray-700 dark:text-white shadow-lg"
+        className="fixed top-4 right-4 z-50 p-3 rounded-full glass text-gray-700 dark:text-white shadow-lg"
       >
-        {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
+        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
       </motion.button>
 
-      {/* Main Content */}
-      <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 py-6 pb-28">
+      {/* Main Content with Page Transitions */}
+      <div className="max-w-md mx-auto px-4 py-4 pb-24">
         <AnimatePresence mode="wait">
-          <Routes>
-            <Route path="/" element={<WeatherDashboard key="weather" />} />
-            <Route path="/water" element={<WaterTracker key="water" />} />
-            <Route path="/analytics" element={<Analytics key="analytics" />} />
-            <Route path="/settings" element={<SettingsPage key="settings" />} />
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<WeatherDashboard />} />
+            <Route path="/water" element={<WaterTracker />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </AnimatePresence>
       </div>
 
-      {/* Bottom Navigation Bar */}
+      {/* Bottom Navigation Bar - Mobile Optimized */}
       <motion.div
         initial={{ y: 100 }}
         animate={{ y: 0 }}
-        className="fixed bottom-4 left-4 right-4 z-50"
+        className="fixed bottom-0 left-0 right-0 z-50 pb-safe"
       >
-        <div className="glass rounded-2xl p-2 flex justify-around items-center shadow-2xl">
-          {tabs.map((tab, idx) => {
-            const isActive = (idx === 0 && window.location.pathname === '/') || 
-                           (tab.path !== '/' && window.location.pathname === tab.path)
+        <div className="glass rounded-t-2xl p-2 flex justify-around items-center shadow-2xl">
+          {tabs.map((tab) => {
+            const isActive = location.pathname === tab.path || (tab.path === '/' && location.pathname === '/')
             return (
               <NavLink
                 key={tab.path}
@@ -126,6 +137,18 @@ function App() {
         </div>
       </motion.div>
     </div>
+  )
+}
+
+// Helper component for navigation
+const NavLink = ({ to, children, className }) => {
+  const location = useLocation()
+  const isActive = location.pathname === to || (to === '/' && location.pathname === '/')
+  
+  return (
+    <a href={to} className={typeof className === 'function' ? className({ isActive }) : className}>
+      {typeof children === 'function' ? children({ isActive }) : children}
+    </a>
   )
 }
 
