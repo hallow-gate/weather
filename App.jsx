@@ -1,9 +1,9 @@
-// App.js
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import WeatherDashboard from './components/WeatherDashboard';
-import WaterTracker from './components/WaterTracker';
+import WeatherDashboard from '../components/WeatherDashboard';
+import WaterTracker from '../components/WaterTracker';
 import './App.css';
+
 
 function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
