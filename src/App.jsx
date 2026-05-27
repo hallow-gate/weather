@@ -13,6 +13,7 @@ function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [showInstall, setShowInstall] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [showManualGuide, setShowManualGuide] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const location = useLocation()
 
@@ -20,11 +21,13 @@ function App() {
     // Check if app is already installed (PWA mode)
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true)
+      setShowInstall(false)
     }
 
     // Listen for display mode changes
     window.matchMedia('(display-mode: standalone)').addEventListener('change', (e) => {
       setIsInstalled(e.matches)
+      if (e.matches) setShowInstall(false)
     })
 
     // Handle PWA install prompt
@@ -37,7 +40,7 @@ function App() {
       }
     })
 
-    // Also handle appinstalled event
+    // Handle appinstalled event
     window.addEventListener('appinstalled', () => {
       setShowInstall(false)
       setIsInstalled(true)
@@ -56,14 +59,20 @@ function App() {
   }, [])
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') {
-      setShowInstall(false)
-      setIsInstalled(true)
+    if (deferredPrompt) {
+      // Native install prompt (Chrome/Edge)
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      if (outcome === 'accepted') {
+        setShowInstall(false)
+        setIsInstalled(true)
+      }
+      setDeferredPrompt(null)
+    } else {
+      // Fallback for Safari and browsers without beforeinstallprompt
+      setShowManualGuide(true)
+      setTimeout(() => setShowManualGuide(false), 5000)
     }
-    setDeferredPrompt(null)
   }
 
   const tabs = [
@@ -73,8 +82,8 @@ function App() {
     { path: '/settings', icon: Settings, label: 'Settings', color: 'from-gray-500 to-slate-600' },
   ]
 
-  // Don't show download button if already installed
-  const shouldShowInstall = showInstall && !isInstalled
+  // Always show button if not installed (regardless of beforeinstallprompt)
+  const shouldShowInstall = !isInstalled
 
   return (
     <div className="min-h-screen transition-all duration-500 relative overflow-hidden">
@@ -90,9 +99,9 @@ function App() {
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-pink-400/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '0.5s' }} />
       </div>
 
-      {/* Floating Download/Install Button - Only shows in browser mode */}
-      <AnimatePresence>
-        {shouldShowInstall && (
+      {/* Floating Download/Install Button - ALWAYS SHOW if not installed */}
+      {shouldShowInstall && (
+        <AnimatePresence>
           <motion.button
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -103,10 +112,34 @@ function App() {
             <Download size={18} />
             Download App
           </motion.button>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>
+      )}
 
-      {/* Theme Toggle Button - Mobile Optimized */}
+      {/* Manual Install Guide Popup (for Safari/iOS) */}
+      {showManualGuide && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="fixed bottom-40 left-4 right-4 z-50 glass rounded-2xl p-4 shadow-2xl"
+        >
+          <div className="text-center">
+            <div className="text-2xl mb-2">📱</div>
+            <h3 className="font-bold text-gray-800 dark:text-white mb-2">Install App Manually</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+              Tap the Share button and select "Add to Home Screen"
+            </p>
+            <button 
+              onClick={() => setShowManualGuide(false)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm"
+            >
+              Got it
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Theme Toggle Button */}
       <motion.button
         whileTap={{ scale: 0.95 }}
         onClick={toggleTheme}
@@ -115,7 +148,7 @@ function App() {
         {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
       </motion.button>
 
-      {/* Main Content with Page Transitions */}
+      {/* Main Content */}
       <div className="max-w-md mx-auto px-4 py-4 pb-24">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
@@ -127,7 +160,7 @@ function App() {
         </AnimatePresence>
       </div>
 
-      {/* Bottom Navigation Bar - Mobile Optimized */}
+      {/* Bottom Navigation Bar */}
       <motion.div
         initial={{ y: 100 }}
         animate={{ y: 0 }}
@@ -161,15 +194,11 @@ function App() {
         </div>
       </motion.div>
 
-      {/* Small indicator that app can be installed */}
+      {/* Tip indicator */}
       {shouldShowInstall && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="fixed bottom-36 right-4 bg-black/50 text-white text-xs px-2 py-1 rounded-full"
-        >
+        <div className="fixed bottom-36 right-4 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
           Tap to install 📱
-        </motion.div>
+        </div>
       )}
     </div>
   )
