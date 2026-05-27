@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generate Icons</title></head>
+<body>
+<canvas id="canvas" width="512" height="512"></canvas>
+<script>
+const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+const ctx = document.getElementById('canvas').getContext('2d');
+
+sizes.forEach(size => {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext('2d');
+  
+  // Draw gradient background
+  const gradient = context.createLinearGradient(0, 0, size, size);
+  gradient.addColorStop(0, '#6366f1');
+  gradient.addColorStop(1, '#8b5cf6');
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, size, size);
+  
+  // Draw water drop
+  context.fillStyle = 'white';
+  context.beginPath();
+  context.moveTo(size/2, size*0.7);
+  context.bezierCurveTo(size*0.3, size*0.5, size*0.3, size*0.3, size/2, size*0.2);
+  context.bezierCurveTo(size*0.7, size*0.3, size*0.7, size*0.5, size/2, size*0.7);
+  context.fill();
+  
+  // Save as PNG
+  const link = document.createElement('a');
+  link.download = `icon-${size}.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+});
+</script>
+</body>
+</html>
