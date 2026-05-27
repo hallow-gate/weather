@@ -1,7 +1,6 @@
-// src/components/WeatherDashboard.jsx
 import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, RefreshCw, Wind, Droplet, Sunrise, Sunset, Thermometer, CloudRain, Sun, Moon, AlertCircle } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { MapPin, RefreshCw, Wind, Droplet, Sunrise, Sunset, Thermometer, AlertCircle } from 'lucide-react'
 import axios from 'axios'
 import { format } from 'date-fns'
 
@@ -12,7 +11,6 @@ const WeatherDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [forecast, setForecast] = useState([])
-  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     getLocationAndWeather()
@@ -57,11 +55,10 @@ const WeatherDashboard = () => {
   const fetchWeatherData = async (lat, lon) => {
     try {
       const response = await axios.get(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto&hourly=temperature_2m,precipitation_probability`
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`
       )
       setWeather(response.data)
       
-      // Process daily forecast
       const dailyData = response.data.daily
       const forecastDays = []
       for (let i = 0; i < 5; i++) {
@@ -84,20 +81,11 @@ const WeatherDashboard = () => {
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`
       )
       const address = response.data.address
-      let name = address.city || address.town || address.village || address.suburb || 'Location'
+      let name = address.city || address.town || address.village || address.suburb || 'Current Location'
       setPlaceName(name)
     } catch (err) {
       setPlaceName('Current Location')
     }
-  }
-
-  const refreshData = async () => {
-    setRefreshing(true)
-    if (location) {
-      await fetchWeatherData(location.lat, location.lon)
-      await reverseGeocode(location.lat, location.lon)
-    }
-    setTimeout(() => setRefreshing(false), 1000)
   }
 
   const getWeatherEmoji = (code) => {
@@ -143,13 +131,13 @@ const WeatherDashboard = () => {
 
   if (error) {
     return (
-      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center py-16">
+      <div className="text-center py-16">
         <AlertCircle size={64} className="mx-auto text-red-500 mb-4" />
         <p className="text-gray-700 dark:text-gray-300 mb-6">{error}</p>
         <button onClick={getLocationAndWeather} className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg">
           Try Again 🔄
         </button>
-      </motion.div>
+      </div>
     )
   }
 
@@ -161,22 +149,9 @@ const WeatherDashboard = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
+      className="space-y-6"
     >
-      {/* Refresh Button */}
-      <div className="flex justify-end mb-4">
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          animate={{ rotate: refreshing ? 360 : 0 }}
-          transition={{ duration: 0.5 }}
-          onClick={refreshData}
-          className="p-2 rounded-full glass text-purple-600 dark:text-purple-400"
-        >
-          <RefreshCw size={20} />
-        </motion.button>
-      </div>
-
-      {/* Location */}
-      <motion.div className="glass rounded-3xl p-6 mb-6 text-center" whileHover={{ scale: 1.02 }}>
+      <div className="glass rounded-3xl p-6 text-center">
         <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-300 mb-2">
           <MapPin size={18} />
           <span className="text-sm">{placeName}</span>
@@ -195,16 +170,11 @@ const WeatherDashboard = () => {
             <Wind size={20} className="mx-auto text-blue-500 mb-1" />
             <p className="text-sm text-gray-600 dark:text-gray-400">{Math.round(weather?.current_weather?.windspeed)} km/h</p>
           </div>
-          <div className="text-center">
-            <Droplet size={20} className="mx-auto text-sky-500 mb-1" />
-            <p className="text-sm text-gray-600 dark:text-gray-400">Humidity</p>
-          </div>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Sunrise/Sunset */}
       {weather?.daily && (
-        <motion.div className="glass rounded-3xl p-6 mb-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <div className="glass rounded-3xl p-6">
           <div className="flex justify-between items-center">
             <div className="text-center flex-1">
               <div className="flex items-center justify-center gap-2 mb-2">
@@ -226,26 +196,25 @@ const WeatherDashboard = () => {
               </p>
             </div>
           </div>
-        </motion.div>
+        </div>
       )}
 
-      {/* 5-Day Forecast */}
-      <motion.div className="glass rounded-3xl p-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+      <div className="glass rounded-3xl p-6">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
           <Thermometer size={20} className="text-purple-500" />
           5-Day Forecast
         </h3>
         <div className="grid grid-cols-5 gap-3">
           {forecast.map((day, idx) => (
-            <motion.div key={idx} className="text-center" whileHover={{ scale: 1.05 }}>
+            <div key={idx} className="text-center">
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{day.day}</p>
               <div className="text-2xl my-2">{getWeatherEmoji(day.code)}</div>
               <p className={`text-sm font-semibold ${getTempColor(day.high)}`}>{day.high}°</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">{day.low}°</p>
-            </motion.div>
+              <p className="text-xs text-gray-500">{day.low}°</p>
+            </div>
           ))}
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   )
 }
