@@ -1,177 +1,253 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import LocationDisplay from './LocationDisplay';
-import WeatherDisplay from './WeatherDisplay';
-import WeatherTips from './WeatherTips';
-import './WeatherDashboard.css';
+// src/components/WeatherDashboard.jsx
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { MapPin, RefreshCw, Wind, Droplet, Sunrise, Sunset, Thermometer, CloudRain, Sun, Moon, AlertCircle } from 'lucide-react'
+import axios from 'axios'
+import { format } from 'date-fns'
 
 const WeatherDashboard = () => {
-  const [location, setLocation] = useState(null);
-  const [weather, setWeather] = useState(null);
-  const [placeName, setPlaceName] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [timeOfDay, setTimeOfDay] = useState('day');
+  const [location, setLocation] = useState(null)
+  const [weather, setWeather] = useState(null)
+  const [placeName, setPlaceName] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [forecast, setForecast] = useState([])
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
-    getLocationAndWeather();
-    
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const newCoords = {
-          lat: position.coords.latitude,
-          lon: position.coords.longitude
-        };
-        
-        const savedLocation = JSON.parse(localStorage.getItem('userLocation'));
-        if (!savedLocation || 
-            Math.abs(savedLocation.lat - newCoords.lat) > 0.01 || 
-            Math.abs(savedLocation.lon - newCoords.lon) > 0.01) {
-          localStorage.setItem('userLocation', JSON.stringify(newCoords));
-          fetchWeatherData(newCoords.lat, newCoords.lon);
-          reverseGeocode(newCoords.lat, newCoords.lon);
-        }
-      },
-      (error) => {
-        console.error('Watch position error:', error);
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-    );
+    getLocationAndWeather()
+  }, [])
 
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
-
-  const getLocationAndWeather = () => {
+  const getLocationAndWeather = async () => {
+    setLoading(true)
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser');
-      setLoading(false);
-      return;
+      setError('Geolocation not supported')
+      setLoading(false)
+      return
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const coords = {
           lat: position.coords.latitude,
           lon: position.coords.longitude
-        };
-        setLocation(coords);
-        localStorage.setItem('userLocation', JSON.stringify(coords));
-        fetchWeatherData(coords.lat, coords.lon);
-        reverseGeocode(coords.lat, coords.lon);
+        }
+        setLocation(coords)
+        localStorage.setItem('userLocation', JSON.stringify(coords))
+        await fetchWeatherData(coords.lat, coords.lon)
+        await reverseGeocode(coords.lat, coords.lon)
+        setLoading(false)
       },
-      (error) => {
-        const savedLocation = JSON.parse(localStorage.getItem('userLocation'));
-        if (savedLocation) {
-          setLocation(savedLocation);
-          fetchWeatherData(savedLocation.lat, savedLocation.lon);
-          reverseGeocode(savedLocation.lat, savedLocation.lon);
+      async (err) => {
+        const saved = JSON.parse(localStorage.getItem('userLocation'))
+        if (saved) {
+          setLocation(saved)
+          await fetchWeatherData(saved.lat, saved.lon)
+          await reverseGeocode(saved.lat, saved.lon)
+          setLoading(false)
         } else {
-          setError('Unable to retrieve your location. Please enable location services.');
-          setLoading(false);
+          setError('Unable to get location')
+          setLoading(false)
         }
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-    );
-  };
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
 
   const fetchWeatherData = async (lat, lon) => {
     try {
       const response = await axios.get(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min&timezone=auto`
-      );
-      setWeather(response.data);
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto&hourly=temperature_2m,precipitation_probability`
+      )
+      setWeather(response.data)
       
-      const sunrise = new Date(response.data.daily.sunrise[0]);
-      const sunset = new Date(response.data.daily.sunset[0]);
-      const now = new Date();
-      
-      const dawnStart = new Date(sunrise.getTime() - 30 * 60000);
-      const dawnEnd = new Date(sunrise.getTime() + 30 * 60000);
-      const duskStart = new Date(sunset.getTime() - 30 * 60000);
-      const duskEnd = new Date(sunset.getTime() + 30 * 60000);
-      
-      if (now >= dawnStart && now <= dawnEnd) {
-        setTimeOfDay('dawn');
-        document.body.className = 'dawn';
-      } else if (now >= duskStart && now <= duskEnd) {
-        setTimeOfDay('dusk');
-        document.body.className = 'dusk';
-      } else if (now > sunrise && now < sunset) {
-        setTimeOfDay('day');
-        document.body.className = 'day';
-      } else {
-        setTimeOfDay('night');
-        document.body.className = 'night';
+      // Process daily forecast
+      const dailyData = response.data.daily
+      const forecastDays = []
+      for (let i = 0; i < 5; i++) {
+        forecastDays.push({
+          day: format(new Date(dailyData.time[i]), 'EEE'),
+          high: Math.round(dailyData.temperature_2m_max[i]),
+          low: Math.round(dailyData.temperature_2m_min[i]),
+          code: dailyData.weathercode[i]
+        })
       }
-      
-      setLoading(false);
+      setForecast(forecastDays)
     } catch (err) {
-      setError('Failed to fetch weather data');
-      setLoading(false);
+      console.error('Weather fetch error:', err)
     }
-  };
+  }
 
   const reverseGeocode = async (lat, lon) => {
     try {
       const response = await axios.get(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`
-      );
-      
-      const address = response.data.address;
-      let placeName = '';
-      
-      if (address.barangay) {
-        placeName = address.barangay;
-      } else if (address.village) {
-        placeName = address.village;
-      } else if (address.suburb) {
-        placeName = address.suburb;
-      } else if (address.town) {
-        placeName = address.town;
-      } else if (address.municipality) {
-        placeName = address.municipality;
-      } else if (address.city) {
-        placeName = address.city;
-      }
-      
-      if (address.city && placeName !== address.city) {
-        placeName += `, ${address.city}`;
-      }
-      
-      setPlaceName(placeName || 'Location found');
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`
+      )
+      const address = response.data.address
+      let name = address.city || address.town || address.village || address.suburb || 'Location'
+      setPlaceName(name)
     } catch (err) {
-      console.error('Geocoding error:', err);
-      setPlaceName('Location detected');
+      setPlaceName('Current Location')
     }
-  };
+  }
+
+  const refreshData = async () => {
+    setRefreshing(true)
+    if (location) {
+      await fetchWeatherData(location.lat, location.lon)
+      await reverseGeocode(location.lat, location.lon)
+    }
+    setTimeout(() => setRefreshing(false), 1000)
+  }
+
+  const getWeatherEmoji = (code) => {
+    const weatherMap = {
+      0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+      45: '🌫️', 48: '🌫️', 51: '🌦️', 61: '🌧️',
+      63: '🌧️', 65: '⛈️', 71: '❄️', 73: '❄️',
+      75: '❄️', 95: '⛈️'
+    }
+    return weatherMap[code] || '🌡️'
+  }
+
+  const getWeatherDescription = (code) => {
+    const descMap = {
+      0: 'Clear Sky', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+      45: 'Foggy', 48: 'Fog', 51: 'Drizzle', 61: 'Rain',
+      63: 'Moderate Rain', 65: 'Heavy Rain', 71: 'Snow', 95: 'Thunderstorm'
+    }
+    return descMap[code] || 'Unknown'
+  }
+
+  const getTempColor = (temp) => {
+    if (temp >= 30) return 'text-orange-500'
+    if (temp >= 25) return 'text-yellow-500'
+    if (temp >= 18) return 'text-green-500'
+    if (temp >= 10) return 'text-blue-400'
+    return 'text-cyan-300'
+  }
 
   if (loading) {
     return (
-      <div className="weather-dashboard glass-card">
-        <div className="loading-spinner"></div>
-        <p>Detecting your location...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="relative">
+          <div className="w-20 h-20 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-3xl animate-pulse">🌤️</span>
+          </div>
+        </div>
+        <p className="mt-6 text-gray-600 dark:text-gray-300 font-medium">Getting your weather...</p>
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
-      <div className="weather-dashboard glass-card">
-        <p className="error-message">{error}</p>
-        <button onClick={getLocationAndWeather} className="retry-button">
-          Try Again
+      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center py-16">
+        <AlertCircle size={64} className="mx-auto text-red-500 mb-4" />
+        <p className="text-gray-700 dark:text-gray-300 mb-6">{error}</p>
+        <button onClick={getLocationAndWeather} className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg">
+          Try Again 🔄
         </button>
-      </div>
-    );
+      </motion.div>
+    )
   }
 
-  return (
-    <div className="weather-dashboard glass-card">
-      <LocationDisplay placeName={placeName} location={location} />
-      {weather && <WeatherDisplay weather={weather} timeOfDay={timeOfDay} />}
-      {weather && <WeatherTips weather={weather} />}
-    </div>
-  );
-};
+  const currentTemp = weather?.current_weather?.temperature
+  const tempColor = getTempColor(currentTemp)
 
-export default WeatherDashboard;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* Refresh Button */}
+      <div className="flex justify-end mb-4">
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          animate={{ rotate: refreshing ? 360 : 0 }}
+          transition={{ duration: 0.5 }}
+          onClick={refreshData}
+          className="p-2 rounded-full glass text-purple-600 dark:text-purple-400"
+        >
+          <RefreshCw size={20} />
+        </motion.button>
+      </div>
+
+      {/* Location */}
+      <motion.div className="glass rounded-3xl p-6 mb-6 text-center" whileHover={{ scale: 1.02 }}>
+        <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-300 mb-2">
+          <MapPin size={18} />
+          <span className="text-sm">{placeName}</span>
+        </div>
+        <div className={`text-7xl font-bold ${tempColor} my-4`}>
+          {Math.round(currentTemp)}<span className="text-3xl">°C</span>
+        </div>
+        <div className="flex items-center justify-center gap-3 text-3xl mb-3">
+          <span>{getWeatherEmoji(weather?.current_weather?.weathercode)}</span>
+          <span className="text-lg font-medium text-gray-600 dark:text-gray-300">
+            {getWeatherDescription(weather?.current_weather?.weathercode)}
+          </span>
+        </div>
+        <div className="flex justify-center gap-8 mt-4">
+          <div className="text-center">
+            <Wind size={20} className="mx-auto text-blue-500 mb-1" />
+            <p className="text-sm text-gray-600 dark:text-gray-400">{Math.round(weather?.current_weather?.windspeed)} km/h</p>
+          </div>
+          <div className="text-center">
+            <Droplet size={20} className="mx-auto text-sky-500 mb-1" />
+            <p className="text-sm text-gray-600 dark:text-gray-400">Humidity</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Sunrise/Sunset */}
+      {weather?.daily && (
+        <motion.div className="glass rounded-3xl p-6 mb-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <div className="flex justify-between items-center">
+            <div className="text-center flex-1">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Sunrise size={24} className="text-orange-500" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">Sunrise</span>
+              </div>
+              <p className="text-xl font-semibold text-gray-800 dark:text-white">
+                {format(new Date(weather.daily.sunrise[0]), 'h:mm a')}
+              </p>
+            </div>
+            <div className="w-px h-12 bg-white/20" />
+            <div className="text-center flex-1">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Sunset size={24} className="text-purple-500" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">Sunset</span>
+              </div>
+              <p className="text-xl font-semibold text-gray-800 dark:text-white">
+                {format(new Date(weather.daily.sunset[0]), 'h:mm a')}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* 5-Day Forecast */}
+      <motion.div className="glass rounded-3xl p-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <Thermometer size={20} className="text-purple-500" />
+          5-Day Forecast
+        </h3>
+        <div className="grid grid-cols-5 gap-3">
+          {forecast.map((day, idx) => (
+            <motion.div key={idx} className="text-center" whileHover={{ scale: 1.05 }}>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{day.day}</p>
+              <div className="text-2xl my-2">{getWeatherEmoji(day.code)}</div>
+              <p className={`text-sm font-semibold ${getTempColor(day.high)}`}>{day.high}°</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500">{day.low}°</p>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+export default WeatherDashboard
