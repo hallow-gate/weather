@@ -1,9 +1,9 @@
-// components/WeatherDashboard.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import LocationDisplay from './LocationDisplay';
 import WeatherDisplay from './WeatherDisplay';
 import WeatherTips from './WeatherTips';
+import './WeatherDashboard.css';
 
 const WeatherDashboard = () => {
   const [location, setLocation] = useState(null);
