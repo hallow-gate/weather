@@ -1,0 +1,24 @@
+/* components/LocationDisplay.css */
+.location-display {
+  text-align: center;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.location-icon {
+  color: #808080;
+  margin-bottom: 10px;
+}
+
+.place-name {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+}
+
+.coordinates {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 300;
+}
