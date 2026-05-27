@@ -6,7 +6,7 @@ import { CloudSun, Droplets, BarChart3, Settings, Sun, Moon, ChevronLeft, Chevro
 import WeatherDashboard from './components/WeatherDashboard'
 import WaterTracker from './components/WaterTracker'
 import Analytics from './components/Analytics'
-import Settings from './components/Settings'
+import SettingsPage from './components/Settings'  // Renamed import
 import { useTheme } from './hooks/useTheme'
 
 function App() {
@@ -83,7 +83,7 @@ function App() {
             <Route path="/" element={<WeatherDashboard key="weather" />} />
             <Route path="/water" element={<WaterTracker key="water" />} />
             <Route path="/analytics" element={<Analytics key="analytics" />} />
-            <Route path="/settings" element={<Settings key="settings" />} />
+            <Route path="/settings" element={<SettingsPage key="settings" />} />
           </Routes>
         </AnimatePresence>
       </div>
