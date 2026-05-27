@@ -68,10 +68,6 @@
   .temp-cold { @apply text-blue-400; }
   .temp-freezing { @apply text-cyan-300; }
 }
-/* src/index.css - Add these tailwind directives at the end */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 @layer components {
   .toggle {
