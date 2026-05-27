@@ -68,3 +68,34 @@
   .temp-cold { @apply text-blue-400; }
   .temp-freezing { @apply text-cyan-300; }
 }
+/* src/index.css - Add these tailwind directives at the end */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .toggle {
+    @apply relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none;
+  }
+  
+  .toggle:checked {
+    @apply bg-purple-600;
+  }
+  
+  .toggle:not(:checked) {
+    @apply bg-gray-300 dark:bg-gray-600;
+  }
+  
+  .toggle:before {
+    content: "";
+    @apply inline-block w-4 h-4 transform transition-transform bg-white rounded-full;
+  }
+  
+  .toggle:checked:before {
+    transform: translateX(1.25rem);
+  }
+  
+  .toggle:not(:checked):before {
+    transform: translateX(0.25rem);
+  }
+}
